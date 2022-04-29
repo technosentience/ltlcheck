@@ -1,4 +1,4 @@
-import Ltlcheck.Ltl
+import Ltlcheck.Syntax
 
 -- Train states.
 inductive S₁
@@ -63,16 +63,13 @@ def TS :=
   handshake ts' TS₂ #[Act.lower, Act.raise].contains
 
 -- G !(inside && down)
-def F1 : LTLFormula Pr := LTLFormula.glob (LTLFormula.neg
-(LTLFormula.andf (LTLFormula.prim Pr.inside) (LTLFormula.prim Pr.down)))
+def F1 : LTLFormula Pr := [LTL| G ¬ (#Pr.inside ∧ #Pr.down)]
 
 -- G (near -> F down)
-def F2 : LTLFormula Pr := LTLFormula.glob (LTLFormula.impl
-(LTLFormula.prim Pr.near) (LTLFormula.fin (LTLFormula.prim Pr.down)))
+def F2 : LTLFormula Pr := [LTL| G (#Pr.near → F #Pr.down)]
 
 -- G (inside -> X far)
-def F3 : LTLFormula Pr := LTLFormula.glob (LTLFormula.impl
-(LTLFormula.prim Pr.inside) (LTLFormula.next (LTLFormula.prim Pr.far)))
+def F3 : LTLFormula Pr := [LTL| G (#Pr.inside → X #Pr.far)]
 
 #eval checkProperty TS F1 -- false
 #eval checkProperty TS F2 -- true

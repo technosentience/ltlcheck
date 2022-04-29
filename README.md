@@ -23,4 +23,6 @@ conversions between them, handshake and interleaving products.
 `Ltlcheck/Ltl.lean` — definition of LTL formulas, LTL-to-Buchi translation,
 property checking for transition systems.
 
+`Ltlcheck/Syntax.lean` — syntax extension for LTL.
+
 `Ltlcheck/Tests.lean` — illustrated test cases.
