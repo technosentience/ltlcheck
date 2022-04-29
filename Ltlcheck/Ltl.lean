@@ -12,6 +12,16 @@ deriving Repr
 
 open LTLFormula
 
+namespace LTLFormula
+  def fal : LTLFormula p := neg tru
+  def orf (x y : LTLFormula p) : LTLFormula p := neg (andf (neg x) (neg y))
+  def impl (x y : LTLFormula p) : LTLFormula p := neg (andf x (neg y))
+  def eqv (x y : LTLFormula p) : LTLFormula p := andf (impl x y) (impl y x)
+  def rls (x y : LTLFormula p) : LTLFormula p := neg (untl (neg x) (neg y))
+  def fin (x : LTLFormula p) : LTLFormula p := untl tru x
+  def glob (x : LTLFormula p) : LTLFormula p := neg (fin (neg x))
+end LTLFormula
+
 def ltlBEQ [BEq p] : LTLFormula p → LTLFormula p → Bool
   | tru, tru => true
   | prim a, prim b => a == b
@@ -119,7 +129,7 @@ def buchiLTLFinal [BEq p] [Hashable p] (f : LTLFormula p) : Array (Option (ElemS
   (closure f).toArray.filterMap (fun xy => if let untl x y := xy then
     some (fun st => if let some st := st then contains' st.val y || not (contains' st.val xy) else false) else none)
 
-def buchiOfLTL [BEq p] [Hashable p] (f : LTLFormula p)
+def gbuchiOfLTL [BEq p] [Hashable p] (f : LTLFormula p)
   : GeneralizedBuchiAutomata (Option (ElemState f)) (Std.HashSet (Subset (atoms f))) where
   init := #[none] --
   next := let es := elemStates f
@@ -128,3 +138,9 @@ def buchiOfLTL [BEq p] [Hashable p] (f : LTLFormula p)
       | none => (es.filter isStart).map (fun s' => (elemAtoms s', s'))
   final := (buchiLTLFinal f).back?.getD (fun _ => false)
   finals := (buchiLTLFinal f).pop
+
+def checkProperty [BEq s] [Hashable s] [BEq p] [Hashable p]
+  (ts : TransitionSystem s a p) (f : LTLFormula p) : Bool :=
+  let bu := buchiOfTS (restrictProp ts (atoms f))
+  let bu' := buchiOfGBuchi (gbuchiOfLTL (neg f))
+  isEmpty (buchiOfGBuchi (buchiProd bu bu'))

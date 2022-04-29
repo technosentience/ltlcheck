@@ -66,20 +66,15 @@ def TS :=
   let ts' := handshake TS₃ TS₁ #[Act.approach, Act.exit].contains
   handshake ts' TS₂ #[Act.lower, Act.raise].contains
 
-def F1 : LTLFormula Pr := LTLFormula.neg (LTLFormula.untl LTLFormula.tru 
-  (LTLFormula.andf (LTLFormula.prim Pr.down) (LTLFormula.prim Pr.inside)))
+def F1 : LTLFormula Pr := LTLFormula.glob (LTLFormula.neg
+(LTLFormula.andf (LTLFormula.prim Pr.inside) (LTLFormula.prim Pr.down)))
 
-def F : LTLFormula Pr := neg' F1
+def F2 : LTLFormula Pr := LTLFormula.glob (LTLFormula.impl
+(LTLFormula.prim Pr.near) (LTLFormula.fin (LTLFormula.prim Pr.down)))
 
-def TS' := restrictProp TS (atoms F)
+def F3 : LTLFormula Pr := LTLFormula.glob (LTLFormula.impl
+(LTLFormula.prim Pr.inside) (LTLFormula.next (LTLFormula.prim Pr.far)))
 
-def BTS := buchiOfTS TS'
-
-def BTS' := buchiOfGBuchi (buchiOfLTL F)
-
-def PROD := buchiOfGBuchi (buchiProd BTS BTS')
-
-def next' s := (PROD.next s).map Prod.snd
-
-#check PROD
-#eval isEmpty PROD
+#eval checkProperty TS F1
+#eval checkProperty TS F2
+#eval checkProperty TS F3

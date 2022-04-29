@@ -60,5 +60,3 @@ def insert' [BEq α] [Hashable α] {hs : Std.HashSet α} (hs' : Std.HashSet (Sub
 
 def subsets [BEq α] [Hashable α] (hs : Std.HashSet α) : Array (Std.HashSet (Subset hs))
   := hs.fold (fun ss x => ss ++ ss.map (insert' · x)) #[Std.HashSet.empty]
-
-#eval subsets (hashSetOfArray #[2, 3, 4])
