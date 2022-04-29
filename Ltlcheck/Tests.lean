@@ -1,38 +1,31 @@
 import Ltlcheck.Ltl
 
-def test1 : BuchiAutomata PUnit PUnit where
-  init := #[PUnit.unit]
-  next _ := #[]
-  final _ := true
-
-def test2 : BuchiAutomata PUnit PUnit where
-  init := #[PUnit.unit]
-  next _ := #[(PUnit.unit, PUnit.unit)]
-  final _ := true
-
-#eval isEmpty test1
-#eval isEmpty test2
-
+-- Train states.
 inductive S₁
   | far | near | inside
 deriving BEq, Hashable, Repr
 
+-- Gate states.
 inductive S₂
  | up | down
 deriving BEq, Hashable, Repr
 
+-- Controller states.
 inductive S₃
   | ze | on | tw | th
 deriving BEq, Hashable, Repr
 
+-- All actions.
 inductive Act
   | approach | enter | exit | lower | raise
 deriving BEq, Hashable, Repr
 
+-- All elementary propositions.
 inductive Pr
   | far | near | inside | up | down
 deriving BEq, Hashable, Repr
 
+-- The train system.
 def TS₁ : TransitionSystem S₁ Act Pr where
   init := #[S₁.far]
   next := fun
@@ -44,6 +37,7 @@ def TS₁ : TransitionSystem S₁ Act Pr where
     | S₁.near => #[Pr.near]
     | S₁.inside => #[Pr.inside]
 
+-- The gate system.
 def TS₂ : TransitionSystem S₂ Act Pr where
   init := #[S₂.up]
   next := fun
@@ -53,6 +47,7 @@ def TS₂ : TransitionSystem S₂ Act Pr where
     | S₂.up => #[Pr.up]
     | S₂.down => #[Pr.down]
 
+-- The controller system.
 def TS₃ : TransitionSystem S₃ Act Pr where
   init := #[S₃.ze]
   next := fun
@@ -62,19 +57,23 @@ def TS₃ : TransitionSystem S₃ Act Pr where
     | S₃.th => #[(Act.raise, S₃.ze)]
   prop _ := #[]
 
+-- The train-gate-controller system
 def TS :=
   let ts' := handshake TS₃ TS₁ #[Act.approach, Act.exit].contains
   handshake ts' TS₂ #[Act.lower, Act.raise].contains
 
+-- G !(inside && down)
 def F1 : LTLFormula Pr := LTLFormula.glob (LTLFormula.neg
 (LTLFormula.andf (LTLFormula.prim Pr.inside) (LTLFormula.prim Pr.down)))
 
+-- G (near -> F down)
 def F2 : LTLFormula Pr := LTLFormula.glob (LTLFormula.impl
 (LTLFormula.prim Pr.near) (LTLFormula.fin (LTLFormula.prim Pr.down)))
 
+-- G (inside -> X far)
 def F3 : LTLFormula Pr := LTLFormula.glob (LTLFormula.impl
 (LTLFormula.prim Pr.inside) (LTLFormula.next (LTLFormula.prim Pr.far)))
 
-#eval checkProperty TS F1
-#eval checkProperty TS F2
-#eval checkProperty TS F3
+#eval checkProperty TS F1 -- false
+#eval checkProperty TS F2 -- true
+#eval checkProperty TS F3 -- false

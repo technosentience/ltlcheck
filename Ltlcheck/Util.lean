@@ -7,7 +7,7 @@ instance [BEq α] [Hashable α] : BEq (Std.HashSet α) where
   beq a b := a.toArray.all b.contains && b.toArray.all a.contains
 
 instance [BEq α] [Hashable α] : Hashable (Std.HashSet α) where
-  hash a := (a.toArray.map hash).foldl Xor.xor 0
+  hash a := (a.toArray.map hash).foldl Xor.xor 0  -- not ideal but works
 
 instance [BEq α] [Hashable α] [Repr α] : Repr (Std.HashSet α) where
   reprPrec hs := reprPrec hs.toArray

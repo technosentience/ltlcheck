@@ -11,8 +11,10 @@ structure BuchiAutomata (s a : Type u) extends BaseAutomata s a where
   final : s → Bool
 
 structure GeneralizedBuchiAutomata (s a : Type u) extends BuchiAutomata s a where
-  finals : Array (s → Bool)
+  finals : Array (s → Bool) 
 
+/-- Helper final states function for GBAs.
+This way, the set F of groups of final states is nonempty by -/
 def gbaFinal (gba : GeneralizedBuchiAutomata s a) (s' : s) : Fin gba.finals.size.succ → Bool
   | ⟨0, _⟩ => gba.final s'
   | ⟨n + 1, h⟩ => gba.finals.get ⟨n, Nat.le_of_succ_le_succ h⟩ s'

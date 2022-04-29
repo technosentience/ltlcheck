@@ -8,10 +8,11 @@ inductive LTLFormula (p : Type u) where
   | andf : LTLFormula p → LTLFormula p → LTLFormula p
   | next : LTLFormula p → LTLFormula p
   | untl : LTLFormula p → LTLFormula p → LTLFormula p
-deriving Repr
+deriving BEq, Repr
 
 open LTLFormula
 
+-- Helper logical operators.
 namespace LTLFormula
   def fal : LTLFormula p := neg tru
   def orf (x y : LTLFormula p) : LTLFormula p := neg (andf (neg x) (neg y))
@@ -22,15 +23,7 @@ namespace LTLFormula
   def glob (x : LTLFormula p) : LTLFormula p := neg (fin (neg x))
 end LTLFormula
 
-def ltlBEQ [BEq p] : LTLFormula p → LTLFormula p → Bool
-  | tru, tru => true
-  | prim a, prim b => a == b
-  | neg a, neg b => ltlBEQ a b
-  | andf a a', andf b b' => ltlBEQ a b && ltlBEQ a' b'
-  | next a, next b => ltlBEQ a b
-  | untl a a', untl b b' => ltlBEQ a b && ltlBEQ a' b'
-  | _, _ => false
-
+-- Not ideal, but `deriving Hashable` crashes the language server for some reason.
 def ltlHash [Hashable p] : LTLFormula p → UInt64
   | tru => 3
   | prim p' => mixHash 7 (hash p')
@@ -39,22 +32,10 @@ def ltlHash [Hashable p] : LTLFormula p → UInt64
   | next a => mixHash 19 (ltlHash a)
   | untl a b => mixHash 23 (mixHash (ltlHash a) (ltlHash b))
 
-instance [BEq p] : BEq (LTLFormula p) where
-  beq := ltlBEQ
-
 instance [Hashable p] : Hashable (LTLFormula p) where
   hash := ltlHash
 
-def restrictLTL [BEq p] [Hashable p] (hs : Std.HashSet p) : LTLFormula p → LTLFormula (Subset hs)
-  | tru => tru
-  | prim p' => match decEq (hs.contains p') true with
-    | isTrue h => prim ⟨p', h⟩
-    | isFalse _ => neg tru
-  | neg x => neg (restrictLTL hs x)
-  | andf x y => andf (restrictLTL hs x) (restrictLTL hs y)
-  | next x => next (restrictLTL hs x)
-  | untl x y => untl (restrictLTL hs x) (restrictLTL hs y)
-
+/-- The set of elementary propositions in the formula. -/
 def atoms [BEq p] [Hashable p] : LTLFormula p → Std.HashSet p
   | tru => {}
   | prim p' => Std.HashSet.empty.insert p'
@@ -91,15 +72,12 @@ def elementary [BEq p] [Hashable p] {f : LTLFormula p} (s : Std.HashSet (Subset 
 
 def ElemState [BEq p] [Hashable p] (f : LTLFormula p) := { hs : Std.HashSet (Subset (closure f)) // elementary hs }
 
-@[defaultInstance]
 instance [BEq p] [Hashable p] {f : LTLFormula p} : BEq (ElemState f) where
   beq x y := x.val == y.val
 
-@[defaultInstance]
 instance [BEq p] [Hashable p] {f : LTLFormula p} : Hashable (ElemState f) where
   hash x := hash x.val
 
-@[defaultInstance]
 instance [BEq p] [Hashable p] [Repr p] {f : LTLFormula p} : Repr (ElemState f) where
   reprPrec x := reprPrec x.val
 
