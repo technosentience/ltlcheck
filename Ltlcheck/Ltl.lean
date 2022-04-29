@@ -35,7 +35,7 @@ def ltlHash [Hashable p] : LTLFormula p → UInt64
 instance [Hashable p] : Hashable (LTLFormula p) where
   hash := ltlHash
 
-/-- The set of elementary propositions in the formula. -/
+/-- The set of elementary propositions in a formula. -/
 def atoms [BEq p] [Hashable p] : LTLFormula p → Std.HashSet p
   | tru => {}
   | prim p' => Std.HashSet.empty.insert p'
@@ -44,10 +44,12 @@ def atoms [BEq p] [Hashable p] : LTLFormula p → Std.HashSet p
   | next x => atoms x
   | untl x y => hashSetUnion (atoms x) (atoms y)
 
+/-- Negation of a formula. -/
 def neg' : LTLFormula p → LTLFormula p
   | neg x => x
   | x => neg x
 
+/-- The set of subformulas of a formula. -/
 def subformulas [BEq p] [Hashable p] : LTLFormula p → Std.HashSet (LTLFormula p)
   | neg x => (subformulas x).insert (neg x)
   | andf x y => (hashSetUnion (subformulas x) (subformulas y)).insert (andf x y)
@@ -55,10 +57,12 @@ def subformulas [BEq p] [Hashable p] : LTLFormula p → Std.HashSet (LTLFormula 
   | untl x y => (hashSetUnion (subformulas x) (subformulas y)).insert (untl x y)
   | x => Std.HashSet.empty.insert x 
 
+/-- Closure of a LTL formula. -/
 def closure [BEq p] [Hashable p] (f : LTLFormula p) : Std.HashSet (LTLFormula p) :=
   let sf := (subformulas f).insert tru
   hashSetUnion sf (hashSetMap neg' sf)
 
+/-- `elementary` checks whether a subset of `closure f` is elementary. -/
 def elementary [BEq p] [Hashable p] {f : LTLFormula p} (s : Std.HashSet (Subset (closure f))) : Bool
   :=
     let cl := (closure f).toArray
@@ -70,6 +74,7 @@ def elementary [BEq p] [Hashable p] {f : LTLFormula p} (s : Std.HashSet (Subset 
       (not (contains' s y) || contains' s xy)
       && ((not (contains' s xy) || contains' s y) || contains' s x) else true)
 
+/-- The type of elementary subsets. -/
 def ElemState [BEq p] [Hashable p] (f : LTLFormula p) := { hs : Std.HashSet (Subset (closure f)) // elementary hs }
 
 instance [BEq p] [Hashable p] {f : LTLFormula p} : BEq (ElemState f) where
@@ -81,11 +86,13 @@ instance [BEq p] [Hashable p] {f : LTLFormula p} : Hashable (ElemState f) where
 instance [BEq p] [Hashable p] [Repr p] {f : LTLFormula p} : Repr (ElemState f) where
   reprPrec x := reprPrec x.val
 
+/-- Enumeration of all elementary subsets. -/
 def elemStates [BEq p] [Hashable p] (f : LTLFormula p) : Array (ElemState f) :=
   (subsets (closure f)).filterMap (fun s => match decEq (elementary s) true with
     | isTrue h => some ⟨s, h⟩
     | isFalse _ => none)
 
+/-- Atomic propositions of a given elementary subset. -/
 def elemAtoms [BEq p] [Hashable p] {f : LTLFormula p} (s : ElemState f) : Std.HashSet (Subset (atoms f))
   := s.val.fold (fun hs f' => if let prim p' := f'.val then
       match decEq ((atoms f).contains p') true with
@@ -93,9 +100,11 @@ def elemAtoms [BEq p] [Hashable p] {f : LTLFormula p} (s : ElemState f) : Std.Ha
       | isFalse _ => hs
       else hs) {}
 
+/-- A predicate for starting states of LTL-to-Buchi. -/
 def isStart [BEq p] [Hashable p] {f : LTLFormula p} (e : ElemState f) : Bool :=
   contains' e.val f
 
+/-- A transition predicate for LTL-to-Buchi. -/
 def isNext [BEq p] [Hashable p] {f : LTLFormula p} (e e' : ElemState f) : Bool :=
   let cl := (closure f).toArray
   cl.all (fun nx => if let next x := nx then
@@ -103,10 +112,12 @@ def isNext [BEq p] [Hashable p] {f : LTLFormula p} (e e' : ElemState f) : Bool :
   && cl.all (fun xy => if let untl x y := xy then
     (contains' e.val xy) == (contains' e'.val y || (contains' e'.val x && contains' e'.val xy)) else true)
 
+/-- Final states of LTL-to-Buchi translation. -/
 def buchiLTLFinal [BEq p] [Hashable p] (f : LTLFormula p) : Array (Option (ElemState f) → Bool) :=
   (closure f).toArray.filterMap (fun xy => if let untl x y := xy then
     some (fun st => if let some st := st then contains' st.val y || not (contains' st.val xy) else false) else none)
 
+/-- Translation of a LTL formula to a GBA. -/
 def gbuchiOfLTL [BEq p] [Hashable p] (f : LTLFormula p)
   : GeneralizedBuchiAutomata (Option (ElemState f)) (Std.HashSet (Subset (atoms f))) where
   init := #[none] --
@@ -117,6 +128,7 @@ def gbuchiOfLTL [BEq p] [Hashable p] (f : LTLFormula p)
   final := (buchiLTLFinal f).back?.getD (fun _ => false)
   finals := (buchiLTLFinal f).pop
 
+/-- `checkProperty` checks whether the transition system `ts` satisfies LTL property `f`. -/
 def checkProperty [BEq s] [Hashable s] [BEq p] [Hashable p]
   (ts : TransitionSystem s a p) (f : LTLFormula p) : Bool :=
   let bu := buchiOfTS (restrictProp ts (atoms f))
